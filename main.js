@@ -1,55 +1,21 @@
-// function Game() {
-//  this.board = new Board();
-// }
-
-// Game.prototype = {
-//  start: function() {
-
-//  },
-
-//  stop: function() {
-
-//  }
-// }
-
-
-// function Board() {
-//  this.array = [];
-//  this.figures = {};
-// }
-
-// Board.prototype = {
-//  init: function() {
-
-//  },
-
-// }
-
 var board = [];
 var boardElem = document.querySelector('.board');
 
-// var figures = {
-//   'I': [{top: 0, left: 0}, {top: 0, left: 30}, {top: 0, left: 60}, {top: 0, left: 90}],
-//   'J': [{top: 30, left: 0}, {top: 30, left: 30}, {top: 30, left: 60}, {top: 0, left: 60}],
-//   'L': [{top: 0, left: 0}, {top: 30, left: 0}, {top: 30, left: 30}, {top: 30, left: 60}],
-//   'O': [{top: 0, left: 30}, {top: 30, left: 30}, {top: 0, left: 60}, {top: 30, left: 60}],
-//   'S': [{top: 30, left: 0}, {top: 0, left: 30}, {top: 30, left: 30}, {top: 0, left: 60}],
-//   'T': [{top: 30, left: 0}, {top: 0, left: 30}, {top: 30, left: 30}, {top: 30, left: 60}],
-//   'Z': [{top: 0, left: 0}, {top: 0, left: 30}, {top: 30, left: 30}, {top: 30, left: 60}]
-// };
-
 var figures = [
-  {type: 'I', pos: [{top: 0, left: 0}, {top: 0, left: 30}, {top: 0, left: 60}, {top: 0, left: 90}]},
-  {type: 'J', pos: [{top: 30, left: 0}, {top: 30, left: 30}, {top: 30, left: 60}, {top: 0, left: 60}]},
-  {type: 'L', pos: [{top: 0, left: 0}, {top: 30, left: 0}, {top: 30, left: 30}, {top: 30, left: 60}]},
-  {type: 'O', pos: [{top: 0, left: 30}, {top: 30, left: 30}, {top: 0, left: 60}, {top: 30, left: 60}]},
-  {type: 'S', pos: [{top: 30, left: 0}, {top: 0, left: 30}, {top: 30, left: 30}, {top: 0, left: 60}]},
-  {type: 'T', pos: [{top: 30, left: 0}, {top: 0, left: 30}, {top: 30, left: 30}, {top: 30, left: 60}]},
-  {type: 'Z', pos: [{top: 0, left: 0}, {top: 0, left: 30}, {top: 30, left: 30}, {top: 30, left: 60}]},
+  {type: 'J', fragments: [[1,0],[1,1],[1,2],[0,2]]},
+  {type: 'T', fragments: [[1,0],[0,1],[1,1],[1,2]]},
+  {type: 'S', fragments: [[1,0],[0,1],[1,1],[0,2]]},
+  {type: 'Z', fragments: [[0,0],[0,1],[1,1],[1,2]]},
+  {type: 'O', fragments: [[0,1],[1,1],[0,2],[1,2]]},
+  {type: 'I', fragments: [[0,0],[0,1],[0,2],[0,3]]},
+  {type: 'L', fragments: [[0,0],[1,0],[1,1],[1,2]]},
 ]
 
 var ROWS = 20;
 var COLS = 10;
+var fragmentSize = 30;
+var currentFigure = null;
+var maxRow = 0;
 
 function initBoard() {
   for (var row = 0; row < ROWS; row++) {
@@ -60,31 +26,24 @@ function initBoard() {
   } 
 }
 
-// function createFigureFragment(top, left) {
-
-// }
-
 function createFigure() {
   var figureElem = document.createElement('div');
   figureElem.classList.add('figure');
   figureElem.classList.add('figure--active');
-
   figureElem.style.top = 0 + 'px';
-  figureElem.style.left = 90 + 'px';
+  figureElem.style.left = fragmentSize * 3 + 'px';
 
   var figureIndex = Math.floor(Math.random() * 7);
   var figure = figures[figureIndex];
-  var fragment = figure.pos;
+  var fragments = figure.fragments;
 
-  console.log(figureIndex, figure, fragment);
-
+  currentFigure = figure;
 
   for (var i = 0; i < 4; i++) {
     var fragmentElem = document.createElement('div');
     fragmentElem.classList.add('fragment');
-
-    fragmentElem.style.top = fragment[i].top + 'px';
-    fragmentElem.style.left = fragment[i].left + 'px';
+    fragmentElem.style.top = fragments[i][0] * fragmentSize + 'px';
+    fragmentElem.style.left = fragments[i][1] * fragmentSize + 'px';
     
     figureElem.appendChild(fragmentElem);
   }
@@ -95,22 +54,54 @@ function createFigure() {
 }
 
 function moveFigure() {
-  var figure = document.querySelector('.figure--active');
-  figure.classList.remove('figure--active');
+  var figureElem = document.querySelector('.figure--active');
+  figureElem.classList.remove('figure--active');
+
+  var figure = currentFigure;
+  var fragments = figure.fragments;
 
   var pos = {top: 0, left: 0};
   var step = 30;
+  var startRow = 1;
+  var curRow = 0;
+  var curCol = 3;
 
-  var timerId = setInterval(function() {
-    pos.top += step;
-    figure.style.top = pos.top + 'px';
+  if (figure.type == 'I') {
+    startRow = 0;
+  }
 
-    if (pos.top >= 570) {
+  
+  var timerId = setInterval(function fallDown() {
+    if (curRow < (ROWS - startRow) && 
+      board[curRow + fragments[0][0]][curCol + fragments[0][1]] !== 1 &&
+      board[curRow + fragments[1][0]][curCol + fragments[1][1]] !== 1 &&
+      board[curRow + fragments[2][0]][curCol + fragments[2][1]] !== 1 &&
+      board[curRow + fragments[3][0]][curCol + fragments[3][1]] !== 1) {
+
+      figureElem.style.top = curRow * fragmentSize + 'px';
+
+      curRow++;
+    } else {
       clearInterval(timerId);
+
+      if (curRow - fragments[0][0] - 1 >= 0 &&
+          curRow - fragments[1][0] - 1 >= 0 &&
+          curRow - fragments[2][0] - 1 >= 0 &&
+          curRow - fragments[3][0] - 1 >= 0) {
+
+        board[curRow + fragments[0][0] - 1][curCol + fragments[0][1]] = 1;
+        board[curRow + fragments[1][0] - 1][curCol + fragments[1][1]] = 1;
+        board[curRow + fragments[2][0] - 1][curCol + fragments[2][1]] = 1;
+        board[curRow + fragments[3][0] - 1][curCol + fragments[3][1]] = 1;
+
+      } else {
+        console.log('game over');
+        return;
+      }
       createFigure();
     }
-  }, 500);
+  }, 200);
 }
 
 initBoard();
-// createFigure();1
+createFigure();
